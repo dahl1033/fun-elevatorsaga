@@ -4,7 +4,7 @@
 
 {
     init: function(elevators, floors) {
-        var elevator = elevators[0]; // first elevator
+        elevators.forEach(function(elevator, index) {
 
         // When elevator is on idle, cycle through floors 
         // finding requested floors and calculate which is closest
@@ -33,14 +33,14 @@
             if (requests.length > 0){
                 console.log('rerouting', requests, closest(requests, floorNum))
                 elevator.goToFloor(closest(requests, floorNum) , true);
-                
+
                 floors[floorNum].requestedUp = false;
                 floors[floorNum].requestedDown = false;
-                
+
             } else {
                 elevator.goToFloor(0);
             }
-        
+
         });
         // When a floor button in the elevator is pressed add to elevator queue
         elevator.on("floor_button_pressed", function(floorNum) {
@@ -52,41 +52,38 @@
         });
         // Before an elevator passes floor check if there is room for more a new passenger(s) and add it to the queue
         elevator.on("passing_floor", function(floorNum, direction) {
-            currFloor = elevator.currentFloor();
-            queue = elevator.destinationQueue;
-            pressedFloors = elevator.getPressedFloors();
-            
-            console.log("passing", currFloor, queue, pressedFloors)
-            
             console.log("passing floor", floorNum, floors[floorNum], "direction: ", direction, elevator.destinationQueue, "loadFactor", elevator.loadFactor());
             // If there is room on board, pick up passengers based on the corresponding elevator direction when arriving
             if (elevator.loadFactor() < 0.69) {
-                    // If elevator is going UP and the passing floor has requested UP, queue floor number.
-                    if (elevator.destinationDirection() == "up" && floors[floorNum].requestedUp) {
-                        if (elevator.destinationQueue.indexOf(floorNum) == -1) { 
-                            elevator.goToFloor(floorNum, true); 
-                        }
-                        // If floor numer is already in the queue, reposition it to next floor and update queue, change floor requested value
-                        else {  
-                            elevator.destinationQueue = elevator.destinationQueue.filter(item => item !== floorNum);
-                            elevator.destinationQueue.unshift(floorNum);
-                            elevator.checkDestinationQueue();
-                        }
-                        floors[floorNum].requestedUp = false;
-                    } 
-                    // If elevator is going UP and the passing floor has requested UP, queue floor number.
-                    else if (elevator.destinationDirection() == "down" && floors[floorNum].requestedDown) {
-                        if (elevator.destinationQueue.indexOf(floorNum) == -1) { 
-                            elevator.goToFloor(floorNum, true); 
-                        }
-                        // If floor numer is already in the queue, reposition it to next floor and update queue, change floor requested value
-                        else {
-                            elevator.destinationQueue = elevator.destinationQueue.filter(item => item !== floorNum);
-                            elevator.destinationQueue.unshift(floorNum);
-                            elevator.checkDestinationQueue();
-                        }
-                        floors[floorNum].requestedDown = false;
+                // If passing floor is already in queue, make it the priority and goto it next
+                if (elevator.destinationQueue.indexOf(floorNum) != -1) {
+                    elevator.destinationQueue.splice(elevator.destinationQueue.indexOf(floorNum), 1);
+                    elevator.goToFloor(floorNum, true); 
+                }
+                // If elevator is going UP and the passing floor has requested UP, queue floor number.
+                 else if (elevator.destinationDirection() == "up" && floors[floorNum].requestedUp) {
+                    if (elevator.destinationQueue.indexOf(floorNum) == -1) { 
+                        elevator.goToFloor(floorNum, true); 
                     }
+                    // If floor numer is already in the queue, reposition it to next floor and update queue, change floor requested value
+                    else {  
+                        elevator.destinationQueue.splice(elevator.destinationQueue.indexOf(floorNum), 1);
+                        elevator.goToFloor(floorNum, true);
+                    }
+                    floors[floorNum].requestedUp = false;
+                } 
+                // If elevator is going UP and the passing floor has requested UP, queue floor number.
+                else if (elevator.destinationDirection() == "down" && floors[floorNum].requestedDown) {
+                    if (elevator.destinationQueue.indexOf(floorNum) == -1) { 
+                        elevator.goToFloor(floorNum, true); 
+                    }
+                    // If floor numer is already in the queue, reposition it to next floor and update queue, change floor requested value
+                    else {
+                        elevator.destinationQueue.splice(elevator.destinationQueue.indexOf(floorNum), 1);
+                        elevator.goToFloor(floorNum, true);
+                    }
+                    floors[floorNum].requestedDown = false;
+                }
             }
         });
         // When elevator has stopeed at a floor, do this
@@ -94,7 +91,7 @@
             console.log("stopped at floor", floorNum,"Que: ", elevator.destinationQueue, elevator.getPressedFloors(), "floor info: ", floors[floorNum]);
             //elevator.destinationQueue.splice(elevator.destinationQueue.indexOf(floorNum), 1);
         });
-        
+        });
         // Initializes actions for each floor when passengers arrive
         floors.forEach(function(floor) {
             // When up button is pressed, mark floor requested UP value to true
